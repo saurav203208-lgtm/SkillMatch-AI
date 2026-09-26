@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SkillMatch AI - Dashboard</title>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
+body{background:#f5f7fb;color:#1f2937}
+nav{min-height:70px;background:white;display:flex;align-items:center;justify-content:space-between;padding:14px 7%;box-shadow:0 2px 10px rgba(0,0,0,.08);gap:15px}
+.logo{font-size:24px;font-weight:bold;color:#2563eb}
+.nav-actions{display:flex;gap:8px;flex-wrap:wrap}
+button,.link-btn{border:0;border-radius:8px;padding:11px 15px;cursor:pointer;font-weight:bold;text-decoration:none;display:inline-block}
+.chatbot-btn{background:#2563eb;color:white}
+.chatbot-btn:hover{background:#1d4ed8}
+.logout-btn{background:#ef4444;color:white}
+.logout-btn:hover{background:#dc2626}
+.container{max-width:1200px;margin:35px auto;padding:0 20px}
+.welcome{margin-bottom:25px}
+.welcome h1{font-size:32px;margin-bottom:8px}
+.welcome p{color:#6b7280}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}
+.card{background:white;padding:25px;border-radius:14px;box-shadow:0 4px 15px rgba(0,0,0,.06);margin-bottom:22px}
+.card h2{margin-bottom:18px;color:#111827}
+.full{grid-column:1/-1}
+.result-card{background:linear-gradient(135deg,#2563eb,#4f46e5);color:white}
+.result-card h2{color:white}
+.score{font-size:48px;font-weight:bold;margin-bottom:12px}
+.skill-results{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-top:18px}
+.skill-box{background:rgba(255,255,255,.16);padding:14px;border-radius:10px}
+.skill-name{font-weight:bold;margin-bottom:8px}
+.skill-score{font-size:22px}
+.field{margin-bottom:17px}
+.field label{display:block;font-weight:bold;margin-bottom:7px}
+.field input,.field textarea{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:7px;font-size:15px}
+.field textarea{min-height:85px;resize:vertical}
+.save-btn{width:100%;background:#2563eb;color:white}
+.save-btn:hover{background:#1d4ed8}
+.message{margin-top:12px;text-align:center;font-weight:bold}
+.assessment-btn{background:white;color:#2563eb;margin-top:18px}
+.loading{color:#6b7280}
+.item{border:1px solid #e5e7eb;border-radius:10px;padding:15px;margin:10px 0;background:#fafafa}
+.item h3{margin-bottom:8px;color:#1d4ed8}
+.item p{margin:5px 0;line-height:1.5}
+.tag{display:inline-block;background:#dbeafe;color:#1e40af;padding:5px 9px;border-radius:15px;margin:4px;font-size:13px}
+pre{white-space:pre-wrap;word-break:break-word;font-size:13px}
+.section-btn{background:#111827;color:white;margin-top:12px}
+@media(max-width:750px){.grid{grid-template-columns:1fr}.full{grid-column:auto}nav{padding:12px 15px}.logo{font-size:19px}.welcome h1{font-size:27px}.card{padding:20px}}
+</style>
+</head>
+
+<body>
+<nav>
+    <div class="logo">SkillMatch AI</div>
+    <div class="nav-actions">
+        <button class="chatbot-btn" onclick="openChatbot()">🤖 AI Assistant</button>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="welcome">
+        <h1>Student Dashboard</h1>
+        <p>Track your skills, career recommendations, projects and learning roadmap.</p>
+    </div>
+
+    <div class="grid">
+        <section class="card result-card">
+            <h2>📊 My Assessment Result</h2>
+            <div id="assessmentContent" class="loading">Loading assessment result...</div>
+        </section>
+
+        <section class="card">
+            <h2>👤 My Profile</h2>
+            <div class="field"><label>Full Name</label><input id="name" type="text" readonly></div>
+            <div class="field"><label>Education</label><input id="education" type="text" placeholder="Example: B.Tech CSE"></div>
+            <div class="field"><label>Skills</label><textarea id="skills" placeholder="HTML, CSS, JavaScript, React"></textarea></div>
+            <div class="field"><label>Interests</label><textarea id="interests" placeholder="Web Development, AI"></textarea></div>
+            <div class="field"><label>Career Goal</label><input id="careerGoal" type="text" placeholder="Full Stack Developer"></div>
+            <button class="save-btn" onclick="saveProfile()">Save Profile</button>
+            <div class="message" id="message"></div>
+        </section>
+
+        <section class="card">
+            <h2>🎯 Career Recommendations</h2>
+            <div id="recommendationContent" class="loading">Loading recommendations...</div>
+            <button class="section-btn" onclick="loadRecommendations()">Refresh</button>
+        </section>
+
+        <section class="card">
+            <h2>📁 Recommended Projects</h2>
+            <div id="projectsContent" class="loading">Loading projects...</div>
+            <button class="section-btn" onclick="loadProjects()">Refresh</button>
+        </section>
+
+        <section class="card">
+            <h2>🗺️ Learning Roadmap</h2>
+            <div id="roadmapContent" class="loading">Loading roadmap...</div>
+            <button class="section-btn" onclick="loadRoadmap()">Refresh</button>
+        </section>
+
+        <section class="card">
+            <h2>📉 Skill Gap Analysis</h2>
+            <div id="skillGapContent" class="loading">Loading skill gap analysis...</div>
+            <button class="section-btn" onclick="loadSkillGap()">Refresh</button>
+        </section>
+    </div>
+</div>
+
+<script>
+const API = "http://localhost:5000";
+const token = localStorage.getItem("skillmatch_token");
+
+if (!token) window.location.href = "index.html";
+
+const headers = {
+    "Authorization": "Bearer " + token,
+    "Content-Type": "application/json"
+};
+
+function openChatbot(){ window.location.href = "chatbot.html"; }
+
+function logout(){
+    localStorage.removeItem("skillmatch_token");
+    window.location.href = "index.html";
+}
+
+async function apiGet(path){
+    const response = await fetch(API + path, {headers});
+    const data = await response.json();
+    if(!response.ok) throw new Error(data.message || "Request failed");
+    return data;
+}
+
+function safe(value){
+    if(value === null || value === undefined || value === "") return "";
+    if(Array.isArray(value)) return value.join(", ");
+    if(typeof value === "object") return JSON.stringify(value, null, 2);
+    return String(value);
+}
+
+function renderData(data, container){
+    if(data === null || data === undefined){
+        container.innerHTML = "<p>No data available yet.</p>";
+        return;
+    }
+
+    let source = data;
+    if(data.recommendations) source = data.recommendations;
+    else if(data.projects) source = data.projects;
+    else if(data.roadmap) source = data.roadmap;
+    else if(data.skillGaps) source = data.skillGaps;
+    else if(data.gaps) source = data.gaps;
+
+    if(Array.isArray(source)){
+        if(source.length === 0){
+            container.innerHTML = "<p>No data available yet.</p>";
+            return;
+        }
+        container.innerHTML = source.map((item,index)=>{
+            if(typeof item !== "object"){
+                return `<div class="item"><h3>${index+1}. ${safe(item)}</h3></div>`;
+            }
+            const title = item.title || item.name || item.career || item.role ||
+                          item.projectName || item.skill || `Item ${index+1}`;
+            let body = "";
+            for(const key of Object.keys(item)){
+                if(["title","name","career","role","projectName","skill"].includes(key)) continue;
+                const value = item[key];
+                if(Array.isArray(value)){
+                    body += `<p><b>${key}:</b> ${value.map(v=>`<span class="tag">${safe(v)}</span>`).join("")}</p>`;
+                }else if(typeof value === "object" && value !== null){
+                    body += `<p><b>${key}:</b></p><pre>${safe(value)}</pre>`;
+                }else{
+                    body += `<p><b>${key}:</b> ${safe(value)}</p>`;
+                }
+            }
+            return `<div class="item"><h3>${index+1}. ${safe(title)}</h3>${body}</div>`;
+        }).join("");
+    }else if(typeof source === "object"){
+        let html = "";
+        for(const key of Object.keys(source)){
+            const value = source[key];
+            if(Array.isArray(value)){
+                html += `<p><b>${key}:</b> ${value.map(v=>`<span class="tag">${safe(v)}</span>`).join("")}</p>`;
+            }else if(typeof value === "object" && value !== null){
+                html += `<div class="item"><h3>${key}</h3><pre>${safe(value)}</pre></div>`;
+            }else{
+                html += `<p><b>${key}:</b> ${safe(value)}</p>`;
+            }
+        }
+        container.innerHTML = html || "<p>No data available yet.</p>";
+    }else{
+        container.innerHTML = `<p>${safe(source)}</p>`;
+    }
+}
+
+async function loadProfile(){
+    try{
+        const data = await apiGet("/api/profile/");
+        const user = data.user || data;
+        document.getElementById("name").value = user.name || "";
+        document.getElementById("education").value = user.education || "";
+        document.getElementById("skills").value = safe(user.skills);
+        document.getElementById("interests").value = safe(user.interests);
+        document.getElementById("careerGoal").value = user.careerGoal || "";
+    }catch(error){
+        document.getElementById("message").textContent = error.message;
+    }
+}
+
+async function saveProfile(){
+    const skills = document.getElementById("skills").value.split(",").map(x=>x.trim()).filter(Boolean);
+    const interests = document.getElementById("interests").value.split(",").map(x=>x.trim()).filter(Boolean);
+
+    try{
+        const response = await fetch(API + "/api/profile/", {
+            method:"PUT",
+            headers,
+            body:JSON.stringify({
+                education:document.getElementById("education").value,
+                skills,
+                interests,
+                careerGoal:document.getElementById("careerGoal").value
+            })
+        });
+        const data = await response.json();
+        if(!response.ok) throw new Error(data.message || "Profile update failed");
+        document.getElementById("message").textContent = data.message || "Profile saved successfully!";
+        loadAllFeatures();
+    }catch(error){
+        document.getElementById("message").textContent = error.message;
+    }
+}
+
+async function loadAssessmentResult(){
+    const box = document.getElementById("assessmentContent");
+    try{
+        const data = await apiGet("/api/assessment/result");
+        const score = data.overallScore ?? data.score ?? 0;
+        let html = `<div class="score">${score}%</div><p>Overall Assessment Score</p>`;
+        const results = data.skillResults || data.results;
+        if(results && typeof results === "object"){
+            html += `<h3 style="margin-top:18px">Skill-wise Performance</h3><div class="skill-results">`;
+            for(const skill in results){
+                html += `<div class="skill-box"><div class="skill-name">${skill}</div><div class="skill-score">${results[skill]}%</div></div>`;
+            }
+            html += "</div>";
+        }
+        html += `<a class="link-btn assessment-btn" href="assessment.html">Retake Assessment</a>`;
+        box.innerHTML = html;
+    }catch(error){
+        box.innerHTML = `<p>No assessment result available yet.</p><a class="link-btn assessment-btn" href="assessment.html">Take Assessment</a>`;
+    }
+}
+
+async function loadRecommendations(){
+    const box = document.getElementById("recommendationContent");
+    box.innerHTML = "Loading...";
+    try{ renderData(await apiGet("/api/recommendation"), box); }
+    catch(error){ box.innerHTML = `<p>${error.message}</p>`; }
+}
+
+async function loadProjects(){
+    const box = document.getElementById("projectsContent");
+    box.innerHTML = "Loading...";
+    try{ renderData(await apiGet("/api/projects"), box); }
+    catch(error){ box.innerHTML = `<p>${error.message}</p>`; }
+}
+
+async function loadRoadmap(){
+    const box = document.getElementById("roadmapContent");
+    box.innerHTML = "Loading...";
+    try{ renderData(await apiGet("/api/roadmap"), box); }
+    catch(error){ box.innerHTML = `<p>${error.message}</p>`; }
+}
+
+async function loadSkillGap(){
+    const box = document.getElementById("skillGapContent");
+    box.innerHTML = "Loading...";
+    try{ renderData(await apiGet("/api/skill-gap"), box); }
+    catch(error){ box.innerHTML = `<p>${error.message}</p>`; }
+}
+
+function loadAllFeatures(){
+    loadProfile();
+    loadAssessmentResult();
+    loadRecommendations();
+    loadProjects();
+    loadRoadmap();
+    loadSkillGap();
+}
+
+loadAllFeatures();
+</script>
+</body>
+</html>
